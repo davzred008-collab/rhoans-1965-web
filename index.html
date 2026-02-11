@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alpha Rho Sigma (RHOANS 1965)</title>
+    <!-- Favicon Integration -->
+    <link rel="icon" type="image/png" href="images/logo.png">
     <!-- Modern Styling & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,13 +22,16 @@
             100% { transform: translateX(-50%); }
         }
         .animate-marquee { animation: marquee 30s linear infinite; }
+        .logo-glow { filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.4)); }
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900 selection:bg-red-600 selection:text-white">
 
-      <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300 py-8">
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300 py-8">
         <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
             <div class="flex items-center gap-4 cursor-pointer" onclick="showPage('home')">
+                <!-- LOGO INTEGRATION -->
                 <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-red-600 overflow-hidden">
                     <img src="images/logo.png" alt="RHOANS Logo" class="w-full h-full object-contain p-1" onerror="this.src='https://ui-avatars.com/api/?name=ARS&background=FF0000&color=fff'">
                 </div>
@@ -35,6 +40,7 @@
                     <span class="text-[10px] font-black text-red-600 uppercase tracking-widest">Rhoans 1965</span>
                 </div>
             </div>
+
 
             <div class="hidden md:flex items-center gap-2">
                 <button onclick="showPage('home')" class="nav-btn px-4 py-2 text-white font-black uppercase text-[10px] tracking-widest hover:text-red-500">Home</button>
