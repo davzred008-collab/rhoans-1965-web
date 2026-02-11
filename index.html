@@ -1,366 +1,431 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Menu, X, Shield, Scroll, History, Users, 
-  Home, ChevronRight, Scale, Award, Send, 
-  Lock, CheckCircle, Database, Search, Info,
-  ExternalLink, MapPin, Calendar, Clock, FileText,
-  AlertCircle, ChevronDown
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Rho Sigma (RHOANS 1965)</title>
+    <!-- Modern Styling & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { font-family: 'Noto Sans', sans-serif; scroll-behavior: smooth; }
+        .rhoan-red { background-color: #FF0000; }
+        .rhoan-red-text { color: #FF0000; }
+        .hidden { display: none; }
+        .nav-scrolled { background-color: rgba(0, 0, 0, 0.95); padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee { animation: marquee 30s linear infinite; }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-900 selection:bg-red-600 selection:text-white">
 
-// --- Firebase Integration (Strict Rules) ---
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, signInAnonymously, signInWithCustomToken, 
-  onAuthStateChanged 
-} from 'firebase/auth';
-import { 
-  getFirestore, collection, addDoc, onSnapshot, 
-  doc, updateDoc, deleteDoc, serverTimestamp, query
-} from 'firebase/firestore';
-
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'rhoans-1965';
-
-// --- Organization Data (Full Index from PDF) ---
-const MOTTO = "Advocates for Righteousness and Scholarship";
-const FOUNDING_DATE = "June 3, 1965";
-
-const BY_LAWS_INDEX = [
-  { id: 1, title: "1. The Fraternal Seal", ref: "Seal", content: "Description of the Torch with Balancer, the year 1965, and the Greek letters Alpha, Rho, and Sigma." },
-  { id: 2, title: "2. The Title", ref: "Title", content: "The official designation of the fraternity and sorority as a legal entity." },
-  { id: 3, title: "3. Article 1: 'The NAME'", ref: "Art-1", content: "The organization shall be known as ALPHA RHO SIGMA FRATERNITY AND SORORITY (RHOANS)." },
-  { id: 4, title: "4. Article 2: 'The Charter'", ref: "Art-2", content: "Guidelines for the establishment of new chapters and the authority of the National Council." },
-  { id: 5, title: "5. Article 3: 'Aims and Objectives'", ref: "Art-3", content: "Brotherhood/Sisterhood, academic scholarship, and the promotion of righteousness." },
-  { id: 6, title: "6. Article 4: 'Membership'", ref: "Art-4", content: "Requirements for candidates (must be at least 13) and the status of a 'True Rhoan'." },
-  { id: 7, title: "7. Article 5: 'Officers'", ref: "Art-5", content: "Roles including Grand Rhoan, Scroll, Coffer, Tribune, and Whip." },
-  { id: 8, title: "8. Article 6: 'Impeachment'", ref: "Art-6", content: "Procedures for expulsion and suspension of erring members." },
-  { id: 9, title: "9. Article 7: 'Committees'", ref: "Art-7", content: "Standing committees for Education, Finance, and Discipline." },
-  { id: 10, title: "10. Article 8: 'Meeting'", ref: "Art-8", content: "Regular meetings are held every 1st Sunday of the month." },
-  { id: 11, title: "11. Article 9: 'Fees'", ref: "Art-9", content: "Structure of registration fees (1,500 PHP) and monthly dues (100 PHP)." },
-  { id: 12, title: "12. Article 10: 'Affectivity'", ref: "Art-10", content: "Date of implementation and the binding nature of the constitution." },
-  { id: 13, title: "13. Article 11: 'Amendment'", ref: "Art-11", content: "Procedures for ratifying the 'Final Set' of amendments with Founder's signature." }
-];
-
-const PALAWAN_COUNCIL = [
-  { role: "Grand Rhoan", name: "Ronald Garcellano" },
-  { role: "Vice Grand Rhoan", name: "Roderick Fabrigas" },
-  { role: "Scroll", name: "Venus Venturillo" },
-  { role: "Asst Scroll", name: "Julie Ann Llano" },
-  { role: "Coffer", name: "Imee Montealegre" },
-  { role: "Tribune", name: "Lorelyn Basa" },
-  { role: "Grand Senior Adviser", name: "Lolito Jun Buñi" }
-];
-
-// --- Sub-Components ---
-
-const SectionHeader = ({ title, subtitle }) => (
-  <div className="mb-12 text-center pt-8">
-    <h2 className="text-4xl font-black uppercase tracking-tighter text-zinc-900 drop-shadow-sm">{title}</h2>
-    <div className="h-1.5 w-20 bg-red-600 mx-auto mt-4 mb-3"></div>
-    {subtitle && <p className="text-red-600 font-bold tracking-[0.3em] uppercase text-[10px]">{subtitle}</p>}
-  </div>
-);
-
-// --- Page Views ---
-
-const HomeView = ({ onNavigate }) => (
-  <div className="animate-in fade-in duration-1000">
-    <section className="relative h-[90vh] flex items-center justify-center overflow-hidden bg-zinc-950">
-      <div className="absolute inset-0 opacity-50 bg-[url('https://images.unsplash.com/photo-1524178232363-1fb28f74b671?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/20 via-zinc-950/80 to-zinc-950"></div>
-      
-      <div className="relative z-10 text-center px-6 max-w-5xl">
-        <div className="inline-block bg-red-600/20 border border-red-500/50 backdrop-blur-md px-6 py-2 rounded-full mb-8">
-          <span className="text-red-400 font-black tracking-[0.5em] uppercase text-xs">Since 1965 • Philippines</span>
-        </div>
-        <h1 className="text-6xl md:text-[8rem] font-black text-white uppercase tracking-tighter mb-4 leading-[0.85]">
-          Alpha Rho Sigma
-        </h1>
-        <p className="text-xl md:text-3xl text-zinc-400 font-light italic mb-12 tracking-tight">"{MOTTO}"</p>
-        
-        <div className="flex flex-wrap justify-center gap-5">
-          <button 
-            onClick={() => onNavigate('join')}
-            className="bg-red-600 hover:bg-red-700 text-white font-black py-5 px-12 rounded-2xl transition-all transform hover:scale-105 shadow-2xl shadow-red-900/40 uppercase tracking-widest text-sm"
-          >
-            Apply for Membership
-          </button>
-          <button 
-            onClick={() => onNavigate('bylaws')}
-            className="bg-white/5 hover:bg-white/10 text-white font-black py-5 px-12 rounded-2xl transition-all border border-white/20 uppercase tracking-widest text-sm backdrop-blur-sm"
-          >
-            Explore the Index
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <div className="bg-black py-12 border-y border-zinc-900">
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
-        {[
-          { icon: History, label: "Heritage", val: "60 Years" },
-          { icon: Shield, label: "Core Value", val: "Righteousness" },
-          { icon: Award, label: "Priority", val: "Scholarship" }
-        ].map((item, i) => (
-          <div key={i} className="flex items-center gap-6 border-l-2 border-red-600/30 pl-8">
-            <item.icon className="text-red-600" size={40} />
-            <div>
-              <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">{item.label}</p>
-              <p className="text-2xl font-black text-white">{item.val}</p>
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300 py-8">
+        <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
+            <div class="flex items-center gap-4 cursor-pointer" onclick="showPage('home')">
+                <div class="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <i data-lucide="shield" class="text-white w-6 h-6"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-black text-white leading-none block tracking-tighter">A P Σ</span>
+                    <span class="text-[10px] font-black text-red-600 uppercase tracking-widest">Rhoans 1965</span>
+                </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
 
-const ByLawsIndexView = () => {
-  const [selected, setSelected] = useState(BY_LAWS_INDEX[0]);
+            <!-- Desktop Links -->
+            <div class="hidden md:flex items-center gap-2">
+                <button onclick="showPage('home')" class="nav-btn px-4 py-2 text-white font-black uppercase text-[10px] tracking-widest hover:text-red-500">Home</button>
+                <button onclick="showPage('history')" class="nav-btn px-4 py-2 text-white font-black uppercase text-[10px] tracking-widest hover:text-red-500">History</button>
+                <button onclick="showPage('bylaws')" class="nav-btn px-4 py-2 text-white font-black uppercase text-[10px] tracking-widest hover:text-red-500">By-Laws</button>
+                <button onclick="showPage('council')" class="nav-btn px-4 py-2 text-white font-black uppercase text-[10px] tracking-widest hover:text-red-500">Council</button>
+                <button onclick="showPage('join')" class="bg-red-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest ml-4 shadow-lg hover:bg-red-700 transition-all">Join Us</button>
+                <button onclick="showPage('portal')" class="p-2 text-zinc-500 hover:text-white ml-2"><i data-lucide="lock" class="w-4 h-4"></i></button>
+            </div>
 
-  return (
-    <div className="py-20 px-4 max-w-7xl mx-auto animate-in slide-in-from-bottom-8">
-      <SectionHeader title="Official Contents" subtitle="By-Laws of Alpha Rho Sigma" />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* Navigation Index */}
-        <div className="lg:col-span-5 space-y-3 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-red-600">
-          {BY_LAWS_INDEX.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setSelected(item)}
-              className={`w-full text-left p-5 rounded-2xl font-bold transition-all flex items-center justify-between border-2 ${
-                selected.id === item.id 
-                ? 'bg-red-600 border-red-600 text-white shadow-2xl shadow-red-900/20' 
-                : 'bg-white border-zinc-100 text-zinc-600 hover:border-red-100 hover:text-red-600'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <span className={`text-xs opacity-60 ${selected.id === item.id ? 'text-white' : 'text-zinc-400'}`}>0{item.id}</span>
-                <span className="text-sm tracking-tight">{item.title}</span>
-              </div>
-              <ChevronRight size={16} className={selected.id === item.id ? 'translate-x-1' : ''} />
+            <!-- Mobile Menu Btn -->
+            <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                <i id="menuIcon" data-lucide="menu"></i>
             </button>
-          ))}
         </div>
+    </nav>
 
-        {/* Content Viewer */}
-        <div className="lg:col-span-7">
-          <div className="bg-white rounded-[2.5rem] p-10 md:p-16 shadow-2xl border border-zinc-50 relative overflow-hidden h-full min-h-[500px]">
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12">
-              <Scroll size={300} />
+    <!-- Mobile Overlay -->
+    <div id="mobileMenu" class="fixed inset-0 z-40 bg-zinc-950 hidden flex flex-col items-center justify-center p-8">
+        <div class="space-y-6 w-full text-center">
+            <button onclick="showPage('home')" class="text-3xl font-black text-white uppercase tracking-tighter block w-full">Home</button>
+            <button onclick="showPage('history')" class="text-3xl font-black text-white uppercase tracking-tighter block w-full">History</button>
+            <button onclick="showPage('bylaws')" class="text-3xl font-black text-white uppercase tracking-tighter block w-full">By-Laws</button>
+            <button onclick="showPage('council')" class="text-3xl font-black text-white uppercase tracking-tighter block w-full">Council</button>
+            <button onclick="showPage('join')" class="text-3xl font-black text-red-600 uppercase tracking-tighter block w-full">Join Now</button>
+            <button onclick="showPage('portal')" class="text-zinc-600 font-bold uppercase tracking-widest block w-full mt-10">Officer Portal</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- HOME SECTION -->
+        <section id="page-home" class="page-content">
+            <div class="relative h-[90vh] flex items-center justify-center bg-zinc-950 overflow-hidden">
+                <div class="absolute inset-0 opacity-40 bg-[url('https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent"></div>
+                
+                <div class="relative z-10 text-center px-6 max-w-4xl">
+                    <div class="inline-block border border-red-600/50 px-6 py-2 rounded-full mb-8 backdrop-blur-sm">
+                        <span class="text-red-600 font-black tracking-[0.4em] uppercase text-xs">Atty. Rodrigo G. Roy • Est. 1965</span>
+                    </div>
+                    <h1 class="text-6xl md:text-9xl font-black text-white uppercase tracking-tighter leading-none mb-6">
+                        Alpha Rho Sigma
+                    </h1>
+                    <p class="text-xl md:text-2xl text-zinc-300 italic mb-12">"Advocates for Righteousness and Scholarship"</p>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <button onclick="showPage('join')" class="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl shadow-xl shadow-red-900/40 uppercase tracking-widest text-sm transition-transform hover:scale-105">Join the Order</button>
+                        <button onclick="showPage('history')" class="bg-white/10 hover:bg-white/20 text-white font-black py-4 px-10 rounded-2xl border border-white/20 uppercase tracking-widest text-sm transition-all">Our Legacy</button>
+                    </div>
+                </div>
             </div>
+
+            <div class="bg-black py-16">
+                <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 text-white">
+                    <div class="text-center group">
+                        <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:rotate-12 transition-all">
+                            <i data-lucide="award" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-2">Scholarship</h3>
+                        <p class="text-zinc-500 text-sm">Dedication to academic excellence and intellectual advancement.</p>
+                    </div>
+                    <div class="text-center group">
+                        <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:rotate-12 transition-all">
+                            <i data-lucide="shield" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-2">Righteousness</h3>
+                        <p class="text-zinc-500 text-sm">Advocating for integrity, truth, and justice in our society.</p>
+                    </div>
+                    <div class="text-center group">
+                        <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:rotate-12 transition-all">
+                            <i data-lucide="users" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-2">Brotherhood</h3>
+                        <p class="text-zinc-500 text-sm">Forging an unbreakable bond that has prevailed since 1965.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- HISTORY SECTION -->
+        <section id="page-history" class="page-content hidden py-32 px-6 max-w-4xl mx-auto">
+            <h2 class="text-5xl font-black uppercase tracking-tighter mb-16 text-center">The Rhoan Legacy</h2>
+            <div class="space-y-16 border-l-4 border-red-600 pl-10 relative">
+                <div>
+                    <span class="text-4xl font-black text-red-600 block mb-2">1965</span>
+                    <h3 class="text-2xl font-black uppercase mb-3">Founding at Lyceum</h3>
+                    <p class="text-zinc-600 leading-relaxed">Founded by Atty. Rodrigo G. Roy and four companions on June 3rd at the Lyceum of the Philippines. Started with eighteen (18) men and eight (8) women.</p>
+                </div>
+                <div>
+                    <span class="text-4xl font-black text-red-600 block mb-2">1972</span>
+                    <h3 class="text-2xl font-black uppercase mb-3">Martial Law (PD 1081)</h3>
+                    <p class="text-zinc-600 leading-relaxed">Student organizations were banned. RHOANS continued underground, preserving the flame of brotherhood through one of the nation's darkest periods.</p>
+                </div>
+                <div>
+                    <span class="text-4xl font-black text-red-600 block mb-2">2015</span>
+                    <h3 class="text-2xl font-black uppercase mb-3">Golden Jubilee</h3>
+                    <p class="text-zinc-600 leading-relaxed">Ratification of the Constitution as the "Final Set" by the Founder. The new calendar for True Rhoans was set.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- BY-LAWS SECTION -->
+        <section id="page-bylaws" class="page-content hidden py-32 px-6 max-w-6xl mx-auto">
+            <h2 class="text-5xl font-black uppercase tracking-tighter mb-16 text-center">Constitution Index</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-xl">
+                    <h3 class="font-black uppercase text-red-600 text-xs tracking-widest mb-4">Article I: Identity</h3>
+                    <p class="text-zinc-700 font-bold mb-4">The Name of this organization shall be ALPHA RHO SIGMA FRATERNITY AND SORORITY.</p>
+                    <p class="text-zinc-500 text-sm">Section 1 defines the organization's legal standing as a fraternal student body.</p>
+                </div>
+                <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-xl">
+                    <h3 class="font-black uppercase text-red-600 text-xs tracking-widest mb-4">Article III: Objectives</h3>
+                    <p class="text-zinc-700 font-bold mb-4">Advancing fraternal assistance, academic scholarship, and the spirit of righteousness.</p>
+                    <p class="text-zinc-500 text-sm">Every member must be an advocate of the founding principles established in 1965.</p>
+                </div>
+                <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-xl">
+                    <h3 class="font-black uppercase text-red-600 text-xs tracking-widest mb-4">Article IV: Membership</h3>
+                    <p class="text-zinc-700 font-bold mb-4">Requires recruitment of at least thirteen (13) candidates for a chapter to operate.</p>
+                    <p class="text-zinc-500 text-sm">Defines the criteria for becoming a "True Rhoan" member.</p>
+                </div>
+                <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-xl">
+                    <h3 class="font-black uppercase text-red-600 text-xs tracking-widest mb-4">Article XI: Amendment</h3>
+                    <p class="text-zinc-700 font-bold mb-4">Final ratification requires the signature of Founder Atty. Rodrigo G. Roy.</p>
+                    <p class="text-zinc-500 text-sm">Ensures the legal and organizational continuity of the Fraternity/Sorority.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- COUNCIL SECTION -->
+        <section id="page-council" class="page-content hidden py-32 px-6 max-w-7xl mx-auto">
+            <div class="text-center mb-20">
+                <h2 class="text-5xl font-black uppercase tracking-tighter">Palawan Council</h2>
+                <p class="text-red-600 font-black uppercase tracking-[0.4em] text-xs mt-4">Term: 2025 - 2026</p>
+            </div>
+            <div id="council-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamically Inserted -->
+            </div>
+        </section>
+
+        <!-- JOIN US SECTION -->
+        <section id="page-join" class="page-content hidden py-32 px-6 max-w-3xl mx-auto">
+            <div class="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-zinc-100">
+                <div class="bg-red-600 p-12 text-white text-center">
+                    <h2 class="text-4xl font-black uppercase tracking-tighter">Start Your Journey</h2>
+                    <p class="opacity-80 mt-2 font-bold uppercase tracking-widest text-[10px]">Submit your Membership Intent</p>
+                </div>
+                <form id="joinForm" class="p-12 space-y-6">
+                    <input required id="form-name" type="text" placeholder="Full Legal Name" class="w-full bg-zinc-50 p-5 rounded-2xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all">
+                    <input required id="form-email" type="email" placeholder="Email Address" class="w-full bg-zinc-50 p-5 rounded-2xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all">
+                    <select id="form-chapter" class="w-full bg-zinc-50 p-5 rounded-2xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all appearance-none">
+                        <option>Alpha (Lyceum)</option>
+                        <option>Beta (PMI)</option>
+                        <option>Chi (Mapua)</option>
+                        <option>Palawan Council</option>
+                    </select>
+                    <textarea id="form-bio" rows="4" placeholder="Brief Statement of Intent" class="w-full bg-zinc-50 p-5 rounded-2xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all resize-none"></textarea>
+                    <button type="submit" id="submitBtn" class="w-full bg-black text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl hover:bg-zinc-900 transition-all">Send Application</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PORTAL SECTION -->
+        <section id="page-portal" class="page-content hidden py-32 px-6 max-w-5xl mx-auto">
+            <div class="flex justify-between items-center mb-10">
+                <h2 class="text-4xl font-black uppercase tracking-tighter">Officer Portal</h2>
+                <div id="auth-status" class="text-xs font-black text-red-600 uppercase tracking-widest">Connecting...</div>
+            </div>
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-zinc-100">
+                <table class="w-full text-left">
+                    <thead class="bg-zinc-950 text-white">
+                        <tr>
+                            <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Applicant</th>
+                            <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Chapter</th>
+                            <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-right">Records</th>
+                        </tr>
+                    </thead>
+                    <tbody id="app-list" class="divide-y divide-zinc-50">
+                        <tr><td colspan="3" class="px-8 py-20 text-center text-zinc-400 italic">Authenticating officer records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-zinc-950 text-white py-24 mt-20 border-t-8 border-red-600">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <div class="flex justify-center gap-6 mb-12">
+                <span class="text-4xl font-black border-2 border-red-600 w-16 h-16 flex items-center justify-center rounded-2xl">A</span>
+                <span class="text-4xl font-black border-2 border-red-600 w-16 h-16 flex items-center justify-center rounded-2xl">P</span>
+                <span class="text-4xl font-black border-2 border-red-600 w-16 h-16 flex items-center justify-center rounded-2xl">Σ</span>
+            </div>
+            <p class="text-zinc-500 font-bold uppercase tracking-[0.5em] mb-4 text-[10px]">National Council • Rhoans Philippines</p>
+            <p class="text-zinc-600 text-sm italic max-w-xl mx-auto">"Let our Wisdom lead us to the Truth of Life. The Power and Magic of every Rhoan shall prevail."</p>
+            <div class="mt-20 pt-10 border-t border-zinc-900 text-[10px] font-bold text-zinc-700 uppercase tracking-widest flex flex-col md:flex-row justify-between gap-6">
+                <p>© 2025 Alpha Rho Sigma Fraternity and Sorority</p>
+                <div class="flex gap-8">
+                    <a href="#" onclick="showPage('bylaws')">Constitution</a>
+                    <a href="#" onclick="showPage('portal')">Officer Access</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Data ---
+        const COUNCIL = [
+            { role: "Grand Rhoan", name: "Ronald Garcellano" },
+            { role: "Vice Grand Rhoan", name: "Roderick Fabrigas" },
+            { role: "Scroll", name: "Venus Venturillo" },
+            { role: "Coffer", name: "Imee Montealegre" },
+            { role: "Tribune", name: "Lorelyn Basa" },
+            { role: "Grand Senior Adviser", name: "Lolito Jun Buñi" }
+        ];
+
+        // --- UI State ---
+        window.showPage = (pageId) => {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+            document.getElementById('mobileMenu').classList.add('hidden');
+            window.scrollTo(0, 0);
             
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
-                  <FileText size={24} />
+            // Adjust Navbar Colors
+            const nav = document.getElementById('navbar');
+            if(pageId === 'home') {
+                nav.classList.remove('bg-zinc-950');
+            } else {
+                nav.classList.add('bg-zinc-950');
+            }
+        };
+
+        window.toggleMobileMenu = () => {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        };
+
+        // Render Council
+        const grid = document.getElementById('council-grid');
+        COUNCIL.forEach(o => {
+            grid.innerHTML += `
+                <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm hover:shadow-2xl transition-all">
+                    <p class="text-red-600 font-black uppercase tracking-widest text-[10px] mb-2">${o.role}</p>
+                    <p class="text-2xl font-black text-zinc-900">${o.name}</p>
                 </div>
-                <div className="h-px w-12 bg-zinc-200"></div>
-                <span className="text-zinc-400 font-black uppercase tracking-widest text-[10px]">Reference: {selected.ref}</span>
-              </div>
-              
-              <h3 className="text-4xl font-black text-zinc-900 mb-8 leading-tight">{selected.title}</h3>
-              <p className="text-zinc-500 text-lg leading-relaxed mb-12 border-l-4 border-red-600/20 pl-8">
-                {selected.content}
-              </p>
+            `;
+        });
 
-              <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100 flex items-start gap-4">
-                <AlertCircle className="text-red-600 shrink-0" size={20} />
-                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                  Note: This digital preview is for quick reference only. For the "Final Set" legal authority, please consult the signed hardcopy with the Founder's signature.
-                </p>
-              </div>
-              
-              <button className="mt-12 w-full md:w-auto bg-zinc-950 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-black transition-all">
-                View Full PDF Version <ExternalLink size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled', 'bg-zinc-950');
+            } else {
+                nav.classList.remove('nav-scrolled');
+                if(!document.getElementById('page-home').classList.contains('hidden')) {
+                    nav.classList.remove('bg-zinc-950');
+                }
+            }
+        });
 
-const MembershipView = ({ user }) => {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', chapter: 'Alpha', bio: '' });
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+        // --- Firebase ---
+        let db, auth, user;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rhoans-1965-default';
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    setLoading(true);
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'applications'), {
-        ...form,
-        status: 'Unprocessed',
-        submittedAt: serverTimestamp()
-      });
-      setSuccess(true);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
+        async function init() {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
-  if (success) return (
-    <div className="py-40 text-center animate-in zoom-in-95">
-      <div className="bg-green-100 text-green-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-        <CheckCircle size={40} />
-      </div>
-      <h2 className="text-4xl font-black uppercase mb-4">Intent Received</h2>
-      <p className="text-zinc-500 max-w-md mx-auto">Your application has been logged into the secure repository. A Council representative will review your credentials.</p>
-      <button onClick={() => setSuccess(false)} className="mt-10 text-red-600 font-bold hover:underline">Submit another application</button>
-    </div>
-  );
+                // Rule 3: Auth Before Queries
+                // Check for custom token first as required
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
 
-  return (
-    <div className="py-20 px-6 max-w-4xl mx-auto animate-in slide-in-from-bottom-8">
-      <SectionHeader title="Candidate Portal" subtitle="Membership Application 2025" />
-      <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-zinc-100">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="bg-zinc-950 p-12 text-white flex flex-col justify-between">
-            <div>
-              <h3 className="text-2xl font-black mb-6 uppercase">Requirements</h3>
-              <ul className="space-y-4 text-sm text-zinc-400">
-                <li className="flex gap-3"><ChevronRight className="text-red-600" size={16}/> Must be an enrolled student</li>
-                <li className="flex gap-3"><ChevronRight className="text-red-600" size={16}/> Commitment to 13 Candidates rule</li>
-                <li className="flex gap-3"><ChevronRight className="text-red-600" size={16}/> Adherence to National By-Laws</li>
-              </ul>
-            </div>
-            <div className="pt-12">
-              <p className="text-xs text-zinc-500 italic">"The Power and Magic of every Rhoan shall prevail..."</p>
-            </div>
-          </div>
-          <form onSubmit={handleSubmit} className="p-12 space-y-6">
-            <input required placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all" />
-            <input required type="email" placeholder="Email Address" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all" />
-            <select value={form.chapter} onChange={e => setForm({...form, chapter: e.target.value})} className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all appearance-none">
-              <option>Alpha (Lyceum)</option>
-              <option>Beta (PMI)</option>
-              <option>Chi (Mapua)</option>
-              <option>Palawan Council</option>
-            </select>
-            <textarea rows="4" placeholder="Brief Introduction" value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none focus:ring-2 focus:ring-red-600 transition-all resize-none"></textarea>
-            <button disabled={loading} className="w-full bg-red-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:bg-red-700 transition-all">
-              {loading ? 'Transmitting...' : 'Submit Application'}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    const statusEl = document.getElementById('auth-status');
+                    if (statusEl) statusEl.innerText = u ? "Logged: " + u.uid.slice(0, 6) : "Offline";
+                    
+                    // Only start listeners if user is authenticated
+                    if(u) {
+                        loadApplications();
+                    }
+                });
 
-// --- Main App Logic ---
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Firebase init error", e);
+                const statusEl = document.getElementById('auth-status');
+                if (statusEl) statusEl.innerText = "Auth Error";
+            }
+        }
 
-export default function App() {
-  const [page, setPage] = useState('home');
-  const [user, setUser] = useState(null);
-  const [scrolled, setScrolled] = useState(false);
+        function loadApplications() {
+            if (!user) return;
+            // Rule 1: Strict Paths - /artifacts/{appId}/public/data/{collectionName}
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
+            
+            // onSnapshot requires success and error callbacks
+            onSnapshot(q, (snap) => {
+                const list = document.getElementById('app-list');
+                if (!list) return;
+                list.innerHTML = "";
+                
+                if (snap.docs.length === 0) {
+                    list.innerHTML = `<tr><td colspan="3" class="px-8 py-20 text-center text-zinc-400 italic">No new applications.</td></tr>`;
+                    return;
+                }
 
-  useEffect(() => {
-    const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else { await signInAnonymously(auth); }
-    };
-    initAuth();
-    return onAuthStateChanged(auth, setUser);
-  }, []);
+                snap.docs.forEach(d => {
+                    const data = d.data();
+                    list.innerHTML += `
+                        <tr class="hover:bg-zinc-50 transition-colors">
+                            <td class="px-8 py-6">
+                                <div class="font-bold text-zinc-900">${data.name || 'Anonymous'}</div>
+                                <div class="text-[10px] text-zinc-400">${data.email || 'No Email'}</div>
+                            </td>
+                            <td class="px-8 py-6">
+                                <span class="bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">${data.chapter || 'Unknown'}</span>
+                            </td>
+                            <td class="px-8 py-6 text-right">
+                                <button onclick="window.deleteApp('${d.id}')" class="text-zinc-300 hover:text-red-600 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                lucide.createIcons();
+            }, (error) => {
+                console.error("Snapshot Error:", error);
+                const list = document.getElementById('app-list');
+                if (list) list.innerHTML = `<tr><td colspan="3" class="px-8 py-20 text-center text-red-400 italic font-bold">Permission Denied. Contact National Council.</td></tr>`;
+            });
+        }
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+        window.deleteApp = async (id) => {
+            if(!user) return;
+            try {
+                // Rule 1: Strict Paths
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', id));
+            } catch (e) { console.error(e); }
+        };
 
-  const nav = [
-    { id: 'home', label: 'Index', icon: Home },
-    { id: 'bylaws', label: 'By-Laws', icon: Scroll },
-    { id: 'council', label: 'Council', icon: Users },
-    { id: 'join', label: 'Join', icon: UserPlusIcon },
-  ];
+        // Form Submit
+        const joinForm = document.getElementById('joinForm');
+        if (joinForm) {
+            joinForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if(!user) {
+                    alert("Authentication in progress. Please wait...");
+                    return;
+                }
+                
+                const btn = document.getElementById('submitBtn');
+                const originalText = btn.innerText;
+                btn.innerText = "Processing...";
+                btn.disabled = true;
 
-  function UserPlusIcon(props) { return <Award {...props} />; }
+                try {
+                    // Rule 1: Strict Paths
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'applications'), {
+                        name: document.getElementById('form-name').value,
+                        email: document.getElementById('form-email').value,
+                        chapter: document.getElementById('form-chapter').value,
+                        bio: document.getElementById('form-bio').value,
+                        submittedAt: serverTimestamp()
+                    });
+                    
+                    alert("Application sent successfully!");
+                    joinForm.reset();
+                } catch (e) {
+                    console.error(e);
+                    alert("Error sending application. Please check permissions.");
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
 
-  return (
-    <div className="min-h-screen bg-zinc-50 font-sans selection:bg-red-600 selection:text-white">
-      {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? 'bg-white py-4 shadow-xl' : 'bg-transparent py-10'}`}>
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4 cursor-pointer group" onClick={() => setPage('home')}>
-            <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-              <Shield className="text-white" size={24} />
-            </div>
-            <div>
-              <span className={`text-2xl font-black leading-none block tracking-tighter transition-colors ${scrolled ? 'text-zinc-950' : 'text-white'}`}>A P Σ</span>
-              <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Rhoans 1965</span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center gap-2">
-            {nav.map(item => (
-              <button
-                key={item.id}
-                onClick={() => setPage(item.id)}
-                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  page === item.id 
-                  ? 'bg-red-600 text-white shadow-xl shadow-red-900/20' 
-                  : `${scrolled ? 'text-zinc-500 hover:text-red-600 hover:bg-zinc-50' : 'text-zinc-300 hover:text-white hover:bg-white/10'}`
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Container */}
-      <main>
-        {page === 'home' && <HomeView onNavigate={setPage} />}
-        {page === 'bylaws' && <ByLawsIndexView />}
-        {page === 'join' && <MembershipView user={user} />}
-        {page === 'council' && (
-          <div className="py-24 px-6 max-w-7xl mx-auto animate-in fade-in">
-            <SectionHeader title="Council Directory" subtitle="Palawan Officers 2025-2026" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {PALAWAN_COUNCIL.map((o, i) => (
-                <div key={i} className="bg-white p-10 rounded-3xl border border-zinc-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all">
-                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6"><Users size={20}/></div>
-                  <p className="text-red-600 font-black uppercase tracking-widest text-[10px] mb-2">{o.role}</p>
-                  <p className="text-2xl font-black text-zinc-900 tracking-tight">{o.name}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-zinc-950 text-white py-24 mt-20 border-t-8 border-red-600">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="flex justify-center gap-6 mb-12">
-            {['A', 'P', 'Σ'].map(c => <span key={c} className="text-5xl font-black border-2 border-red-600 w-20 h-20 flex items-center justify-center rounded-3xl hover:bg-red-600 transition-colors cursor-default">{c}</span>)}
-          </div>
-          <p className="text-zinc-400 font-black uppercase tracking-[0.5em] mb-4 text-xs">National Council • Philippines</p>
-          <p className="text-zinc-600 text-sm italic max-w-xl mx-auto leading-relaxed">
-            "Wisdom leads us to the Truth of Life. The sacrifices of these brothers will be marked in every pillar of our Fraternity / Sorority."
-          </p>
-          <div className="mt-20 pt-10 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-            <p>© {new Date().getFullYear()} Alpha Rho Sigma Fraternity and Sorority</p>
-            <div className="flex gap-10">
-              <button onClick={() => setPage('bylaws')} className="hover:text-red-600">Index of Laws</button>
-              <button onClick={() => setPage('home')} className="hover:text-red-600">Archive</button>
-              <a href="#" className="hover:text-red-600">Founder's Portal</a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+        init();
+    </script>
+</body>
+</html>
